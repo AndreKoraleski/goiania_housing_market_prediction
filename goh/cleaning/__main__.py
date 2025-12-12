@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 COLUMNS_TO_REMOVE = [
     "id",
+    "tipo_imovel",
     "sub_tipo_imovel",
     "rua_numero",
     "titulo",
