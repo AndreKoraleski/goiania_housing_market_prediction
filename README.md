@@ -417,12 +417,6 @@ dependencies = [
 
 ---
 
-## Licença
-
-MIT License - Copyright © 2025 Andre Koraleski
-
----
-
 ## Autores
 
 Andre Koraleski - [andrekorale@gmail.com](mailto:andrekorale@gmail.com)
