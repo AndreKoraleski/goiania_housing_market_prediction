@@ -419,7 +419,12 @@ dependencies = [
 
 ## Autores
 
-Andre Koraleski - [andrekorale@gmail.com](mailto:andrekorale@gmail.com)
+- Andre Koraleski - [andre.andre2@discente.ufg.br](mailto:andre.andre2@discente.ufg.br)
+- Frederico Relvas [relvas@discente.ufg.br](mailto:relvas@discente.ufg.br)
+- Henrick de Souza [henrick.henrick@discente.ufg.br](mailto:henrick.henrick@discente.ufg.br)
+- Lucas Nogueira - [lucas.nogueira@discente.ufg.br](mailto:lucas.nogueira@discente.ufg.br)
+- Marcos dos Anjos - [viniciusdosanjos@discente.ufg.br](mailto:viniciusdosanjos@discente.ufg.br)
+- Raphael Alves - [raphael_alves@discente.ufg.br](mailto:raphael_alves@discente.ufg.br)
 
 ---
 

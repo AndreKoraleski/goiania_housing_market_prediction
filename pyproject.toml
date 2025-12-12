@@ -3,7 +3,12 @@ name = "goiania-housing-market-prediction"
 version = "0.1.0"
 description = ""
 authors = [
-    { name = "AndreKoraleski", email = "andrekorale@gmail.com" }
+    { name = "Andre Koraleski", email = "andre.andre2@discente.ufg.br" },
+    { name = "Frederico Relvas", email = "relvas@discente.ufg.br" },
+    { name = "Henrick de Souza", email = "henrick.henrick@discente.ufg.br" },
+    { name = "Lucas Nogueira", email = "lucas.nogueira@discente.ufg.br"},
+    { name = "Marcos dos Anjos", email = "viniciusdosanjos@discente.ufg.br" },
+    { name = "Raphael Alves", email = "raphael_alves@discente.ufg.br" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
