@@ -12,11 +12,14 @@ def create_rf_model():
     Os hiperparâmetros foram escolhidos com base em experimentação prévia
     e em Random Search.
 
-    Inicialmente, única diferença a versões anteriores é a redução de max_depth de
-    infinito para 25.
-
     Returns:
         RandomForestRegressor: Instância do modelo configurado.
+
+    Notes:
+        Anteriormente utilizávamos diferentes valores, mas após testes,
+        estes parâmetros mostraram melhor desempenho.
+            - max_depth de infinito foi alterado para 25.
+            - max_features de 'sqrt' foi alterado para 0.4.    
     """
     return RandomForestRegressor(
         n_estimators=300,
