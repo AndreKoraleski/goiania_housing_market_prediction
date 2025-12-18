@@ -7,19 +7,18 @@ from .pipeline import ModelPipeline
 
 def create_lgbm_model():
     """
-    Cria e retorna um LGBMRegressor.
-    
-    O LightGBM lida nativamente com features categóricas e valores nulos,
-    geralmente sendo mais rápido e leve que o XGBoost.
+    Retorna um LGBMRegressor configurado com os melhores hiperparâmetros.
     """
     return LGBMRegressor(
-        n_estimators=1000,
-        learning_rate=0.05,
-        num_leaves=31,      
-        max_depth=-1,       
-        min_child_samples=20,
-        subsample=0.8,
-        colsample_bytree=0.8,
+        n_estimators=2000,        
+        learning_rate=0.05,       
+        num_leaves=70,           
+        max_depth=20,             
+        min_child_samples=20,     
+        subsample=0.8,            
+        colsample_bytree=1.0,    
+        reg_alpha=0.1,           
+        reg_lambda=10,           
         n_jobs=-1,
         random_state=42,
         verbose=-1
