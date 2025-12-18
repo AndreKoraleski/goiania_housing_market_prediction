@@ -40,7 +40,8 @@ def main():
         model_factory=create_rf_model, 
         name="RandomForest", 
         use_scaler=False,        
-        impute_strategy='mean'
+        impute_strategy='mean',
+        encode_categoricals=True
     )
     
     pipeline.run_cross_validation(df, n_splits=10)

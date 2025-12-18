@@ -45,7 +45,8 @@ def main():
         model_factory=create_grid_search_model,
         name="ElasticNet_GridSearch",
         use_scaler=True,
-        impute_strategy='median'
+        impute_strategy='median',
+        encode_categoricals=True
     )
     
     pipeline.run_cross_validation(df, n_splits=10)

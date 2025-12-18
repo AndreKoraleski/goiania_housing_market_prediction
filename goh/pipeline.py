@@ -15,20 +15,23 @@ logger = logging.getLogger(__name__)
 
 
 class ModelPipeline:
-    def __init__(self, model_factory, name, use_scaler=False, impute_strategy='mean'):
+    def __init__(self, model_factory, name, use_scaler=False, impute_strategy='mean', encode_categoricals=True):
         """
         Pipeline genérica para treinamento e validação de modelos.
 
         Parameters:
             model_factory (callable): Função que retorna uma instância nova do modelo.
             name (str): Nome do modelo para logs e arquivos.
-            use_scaler (bool): Se True, aplica StandardScaler (para modelos lineares).
+            use_scaler (bool): Se True, aplica StandardScaler (Requer encode_categoricals=True).
             impute_strategy (str): 'mean' ou 'median' para preencher nulos.
+            encode_categoricals (bool): Se True, usa TargetEncoder (para Linear/RF/XGBoost antigo).
+                                        Se False, converte para 'category' dtype (para CatBoost/LightGBM).
         """
         self.model_factory = model_factory
         self.name = name
         self.use_scaler = use_scaler
         self.impute_strategy = impute_strategy
+        self.encode_categoricals = encode_categoricals
         
         self.categorical_columns = ['Rua', 'Bairro', 'Grupo']
         self.target_column = 'Valor'
@@ -37,12 +40,6 @@ class ModelPipeline:
     def _get_X_y(self, df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
         """
         Separa features e target.
-
-        Parameters:
-            df (DataFrame): DataFrame completo com features e target.
-
-        Returns:
-            tuple[pd.DataFrame, pd.Series]: Features (X) e target (y).
         """
         return df.drop(columns=[self.target_column]), df[self.target_column]
 
@@ -50,13 +47,6 @@ class ModelPipeline:
     def _impute(self, df, stats=None) -> tuple[pd.DataFrame, dict]:
         """
         Preenche valores nulos e retorna estatísticas usadas.
-
-        Parameters:
-            df (DataFrame): Dados a serem imputados.
-            stats (dict): Estatísticas pré-calculadas para imputação.
-
-        Returns:
-            tuple[pd.DataFrame, dict]: Dados com nulos preenchidos e estatísticas usadas.
         """
         df_output = df.copy()
         numeric_columns = [c for c in df_output.columns if c not in self.categorical_columns]
@@ -72,6 +62,7 @@ class ModelPipeline:
             
         for c in self.categorical_columns:
             if c in df_output.columns:
+                # Preenche NaN com 'Missing' para garantir integridade e converte para string
                 df_output[c] = df_output[c].astype(str).fillna('Missing')
             else:
                 df_output[c] = 'Missing'
@@ -81,45 +72,43 @@ class ModelPipeline:
 
     def _transform(self, X_train: pd.DataFrame, y_train_log: pd.Series, X_validation: pd.DataFrame | None = None):
         """
-        Aplica TargetEncoder e opcionalmente StandardScaler.
+        Aplica TargetEncoder (se solicitado) ou converte para dtype category.
         Retorna dados transformados e os transformers fitados.
-
-        Parameters:
-            X_train (DataFrame): Dados de treino.
-            y_train_log (Series): Target log-transformado para treino.
-            X_val (DataFrame) | None: Dados de validação (opcional).
-
-        Returns:
-            tuple: Dados transformados (X_train, X_val), TargetEncoder, StandardScaler (se usado).
         """
-        encoder = TargetEncoder(smooth="auto", target_type="continuous", random_state=42)
-        
-        X_encoded_data = X_train.copy()
-        X_encoded_data[self.categorical_columns] = encoder.fit_transform(X_train[self.categorical_columns], y_train_log)
-        
-        X_encoded_validation_data = None
-        if X_validation is not None:
-            X_encoded_validation_data = X_validation.copy()
-            X_encoded_validation_data[self.categorical_columns] = encoder.transform(X_validation[self.categorical_columns])
-
+        encoder = None
         scaler = None
-        if self.use_scaler:
-            scaler = StandardScaler()
-            X_encoded_data = pd.DataFrame(scaler.fit_transform(X_encoded_data), columns=X_encoded_data.columns, index=X_encoded_data.index)
-            
-            if X_encoded_validation_data is not None:
-                X_encoded_validation_data = pd.DataFrame(scaler.transform(X_encoded_validation_data), columns=X_encoded_validation_data.columns, index=X_encoded_validation_data.index)
+        
+        X_processed = X_train.copy()
+        X_val_processed = X_validation.copy() if X_validation is not None else None
 
-        return X_encoded_data, X_encoded_validation_data, encoder, scaler
+        if self.encode_categoricals:
+            # Estratégia Clássica (Linear / RF)
+            encoder = TargetEncoder(smooth="auto", target_type="continuous", random_state=42)
+            X_processed[self.categorical_columns] = encoder.fit_transform(X_train[self.categorical_columns], y_train_log)
+            
+            if X_val_processed is not None:
+                X_val_processed[self.categorical_columns] = encoder.transform(X_validation[self.categorical_columns])
+
+            if self.use_scaler:
+                scaler = StandardScaler()
+                X_processed = pd.DataFrame(scaler.fit_transform(X_processed), columns=X_processed.columns, index=X_processed.index)
+                if X_val_processed is not None:
+                    X_val_processed = pd.DataFrame(scaler.transform(X_val_processed), columns=X_val_processed.columns, index=X_val_processed.index)
+        
+        else:
+            # Estratégia Nativa para Boosters (CatBoost / LightGBM)
+            # Apenas converte para 'category' para que os modelos identifiquem automaticamente
+            for c in self.categorical_columns:
+                X_processed[c] = X_processed[c].astype('category')
+                if X_val_processed is not None:
+                    X_val_processed[c] = X_val_processed[c].astype('category')
+
+        return X_processed, X_val_processed, encoder, scaler
 
 
     def run_cross_validation(self, df: pd.DataFrame, n_splits: int = 10):
         """
         Executa Cross-Validation estratificado e reporta métricas.
-
-        Parameters:
-            df (DataFrame): Dados completos para CV.
-            n_splits (int): Número de folds para StratifiedKFold.
         """
         logger.info(f"--- Iniciando CV: {self.name} ({n_splits} folds) ---")
         X, y = self._get_X_y(df)
@@ -166,9 +155,6 @@ class ModelPipeline:
     def train_final_and_create_submission(self, df: pd.DataFrame):
         """
         Treina o modelo final com todos os dados e gera submissão.
-
-        Parameters:
-            df (DataFrame): Dados completos para treino final.
         """
         logger.info(f"\nTreinando modelo final: {self.name}...")
         X, y = self._get_X_y(df)
@@ -192,19 +178,26 @@ class ModelPipeline:
         
         X_test, _ = self._impute(X_test, stats)
         
+        X_test_processed = X_test.copy()
+        
+        # Aplica transformação no teste
+        if self.encode_categoricals:
+            X_test_processed[self.categorical_columns] = encoder.transform(X_test[self.categorical_columns])
+            if self.use_scaler and scaler:
+                # Mantém colunas e nomes alinhados
+                X_test_processed = pd.DataFrame(scaler.transform(X_test_processed), columns=X_test_processed.columns)
+        else:
+             for c in self.categorical_columns:
+                X_test_processed[c] = X_test_processed[c].astype('category')
+        
+        # Garante alinhamento de colunas (segurança para casos de encoding)
         training_columns = X_processed.columns
-        X_test_encoded = X_test.copy()
-        X_test_encoded[self.categorical_columns] = encoder.transform(X_test[self.categorical_columns])
-        
         for c in training_columns:
-            if c not in X_test_encoded.columns:
-                X_test_encoded[c] = 0
-        X_test_encoded = X_test_encoded[training_columns]
-        
-        if self.use_scaler and scaler:
-            X_test_encoded = pd.DataFrame(scaler.transform(X_test_encoded), columns=training_columns)
-            
-        predictions = np.expm1(model.predict(X_test_encoded))
+            if c not in X_test_processed.columns:
+                X_test_processed[c] = 0
+        X_test_processed = X_test_processed[training_columns]
+
+        predictions = np.expm1(model.predict(X_test_processed))
         
         submission_file_name = f"submission_{self.name.lower().replace(' ', '_')}.csv"
         df_submission = pd.DataFrame({'id': range(len(predictions)), 'Valor': predictions})

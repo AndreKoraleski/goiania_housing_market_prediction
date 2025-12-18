@@ -11,10 +11,12 @@ authors = [
     { name = "Raphael Alves", email = "raphael_alves@discente.ufg.br" }
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 
 dependencies = [
+    "catboost>=1.2.8",
+    "lightgbm>=4.6.0",
     "matplotlib>=3.10.8",
     "pandas>=2.3.3",
     "python-dotenv>=1.2.1",
@@ -22,6 +24,7 @@ dependencies = [
     "rich>=14.2.0",
     "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
+    "xgboost>=3.1.2",
 ]
 
 [build-system]
